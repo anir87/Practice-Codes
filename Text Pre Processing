@@ -1,0 +1,63 @@
+import csv
+import codecs
+import pandas as pd
+import numpy as np 
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.feature_extraction.text import CountVectorizer
+import string
+import nltk
+from nltk import word_tokenize as wt
+from nltk import WordNetLemmatizer
+from nltk.util import ngrams
+from datetime import datetime
+from collections import Counter
+from nltk.corpus import stopwords
+
+file_path = 'P:/FILI/Adhoc/Text Mining/Hackathon/Downloaded Files/Agent_Transcripts'
+for ctr in range(1,17):
+    filename =  file_path + str(ctr) + '.csv'
+    Data1 = pd.read_csv(filename)
+    Filtered_Notes_Set = Data1.dropna(subset=['phrase'])
+    corpus = Filtered_Notes_Set['phrase'].values
+    corpus = corpus[pd.notnull(corpus)]
+    punc_list = ['.', ',', '?', '!', ':', ';', "'", '"', '(', ')', '[', ']', '{', '}', '‐', '-', '—', '/', '&', '*', '@', '•',
+                '#', '%', '_']
+    stopfile = open('P:/FILI/Adhoc/Text Mining/Hackathon/stopwords.txt','r')
+    stopwords_c = stopfile.read().split()
+    clean_corpus = []
+    stop_words = set(stopwords.words('english'))
+    for i in range(len(corpus)):
+        clean_list = []
+        ##s = corpus[i].lower().translate(string.maketrans('','', string.punctuation))
+        tokens = wt(corpus[i].lower())
+        for w in tokens:
+            if w not in stopwords_c:
+                if w not in stop_words:
+                    if w not in punc_list:
+                        clean_list.append(w)
+        clean_corpus.append(' '.join(clean_list))
+    lemma = nltk.WordNetLemmatizer() 
+    #corpus = Filtered_Notes_Final['phrase'].values
+    #corpus = corpus[pd.notnull(corpus)]
+    #corpus = corpus.tolist()
+    lemmatized_corpus = []
+    for i in range(len(clean_corpus)):
+        lemmatized_words = []     
+        #s = corpus[i].translate(None, string.punctuation)           
+        tokens = nltk.word_tokenize(clean_corpus[i])
+        for word, tag in nltk.pos_tag(tokens):
+            wntag = tag[0].lower()
+            wntag = wntag if wntag in ['r', 'n', 'v'] else 'a' if wntag in ['j'] else None
+            if not "'" in word:
+                if not wntag:
+                    lemmatized_words.append(word)
+                else:
+                    lemmatized_words.append(lemma.lemmatize(word, wntag))   
+        lemmatized_corpus.append(' '.join(lemmatized_words))
+    clean_corpus1 = pd.DataFrame({'CLEAN_TEXT':clean_corpus})
+    Data2 = pd.concat([Data1,clean_corpus1], axis = 1)
+    lemmatized_corpus1 = pd.DataFrame({'LEMMATIZED_TEXT':lemmatized_corpus})
+    Data3 = pd.concat([Data2,lemmatized_corpus1], axis = 1)
+    filename2 = 'Agent_Transcripts'+ str(ctr) + '_lemma.csv'
+    Data3.to_csv(filename2)
+    lemmatized_corpus
