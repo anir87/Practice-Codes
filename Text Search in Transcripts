@@ -1,0 +1,32 @@
+df = pd.read_csv('''<insert file name>''')
+interaction_id = []
+term_count = []
+interaction_tmst = []
+customer_id = []
+freq_count = []
+nrows = len(df.index)
+ncols = 24
+for i in range(len(df.index)):
+    count_list = [0] * 24
+    count = 0
+    k = 0
+    for term in ["income guarantee", "income guaranteed", "income stream", "generate income", "retirement income", "lifetime income", "guarantee income", "guaranteed income", "income streams", "income generation", "income generate", "retire income", "income retirement", "income retire", "annuity" , "annuities", "stream of income", "income for life", "defer tax", "tax deferral", "tax defer", "tax saving", "save tax", "income in retirement"]:
+        try:
+            count = count + df['phrase'][i].count(term)
+            count_list[k] = df['phrase'][i].count(term)
+            k = k+1
+        except KeyError:
+            pass
+    if count > 0:
+        customer_id.append(df['customer_id'][i])
+        interaction_id.append(df['interaction_id'][i])
+        freq_count.append(count)
+        interaction_tmst.append(df['interaction_tmst'][i])
+        term_count.append(count_list)		
+
+
+n_df = pd.DataFrame(term_count)
+new_l = list(zip(interaction_id, interaction_tmst, freq_count))
+new_df = pd.DataFrame(new_l)
+df3 = pd.concat([new_df, n_df], axis=1)		
+df3.to_csv("Output_phrase_frequency.csv")
