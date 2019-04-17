@@ -1,0 +1,90 @@
+import pandas as pd
+import re
+from itertools import izip
+
+
+logging.basicConfig(file = 'new_model.log', format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
+data_raw = pd.read_csv("C:\Users\A589562\Interaction_level_Lemmatized_6mths_2018.csv")
+data_raw = data_raw.dropna(subset = ['phrase'])
+article_comp = list(data_raw['phrase'])
+article_ids = list(data_raw['interaction_id'])
+len(article_comp)
+for i in range(len(article_comp)):
+    articles = article_comp[i]
+    articles = re.sub('\s+', ' ', articles)
+    article_comp[i] = articles
+	  
+from nltk.corpus import stopwords 
+from nltk.stem.wordnet import WordNetLemmatizer
+import string
+'''stop = set(stopwords.words('english'))
+days={'monday','tuesday','wednesday','thursday','friday','mon','tue','wed','thurs','thur','fri'}
+months={'january','february','march','april','may','june','july','august','september','october','november','december','jan','feb','mar','apr','jun','jul','aug','sept','oct','nov','dec'}
+custom_stopwords={'px','million','billion','font','border','img','width','text','want','ignite','ago','way','think','know','change','market','firm','percent','company','best','market','provide','account','end','include','data','client','say','use','business','reuters','http','www','com','org','bank','accord','make','tell','year','street','wall','white','cite','email','accord','print','reprint','content','article','author','scan','fix','fresh','industry','base','offer','financial','time','help','work','trust','need'}
+#custom_stopwords={'say'}
+stop.update(custom_stopwords)
+stop.update(months)
+stop.update(days)
+exclude = set(string.punctuation) 
+lemma = WordNetLemmatizer()
+def clean(doc):
+    punc_free = ''.join(ch for ch in doc if ch not in exclude)
+    num_free = ''.join(ch for ch in punc_free if not ch.isdigit())
+    stop_free = " ".join([i for i in num_free.lower().split() if i not in stop and len(i) >= 3])
+    normalized = " ".join(lemma.lemmatize(word, 'v') for word in stop_free.split())
+    normalized = " ".join(lemma.lemmatize(word) for word in normalized.split())
+    return normalized
+'''
+#Preparing the Bag of Words
+doc_clean = [doc.split() for doc in article_comp]
+import gensim
+from gensim import corpora
+from gensim import similarities
+#Preparing the Dictionary
+dictionary = corpora.Dictionary(doc_clean)
+dictionary.filter_extremes(no_below = 10, no_above = 0.7)  ##ignore words that appear in less than 10 documents or more than 60% documents
+dictionary.save("Overall_New_Filtered_Dictionary.dict")
+#Preparing the LDA Corpus
+doc_term_matrix = [dictionary.doc2bow(doc) for doc in doc_clean]
+corpora.MmCorpus.serialize('Overall_new_Corpus_Filtered.mm', doc_term_matrix)
+Lda = gensim.models.ldamodel.LdaModel
+ldamodel = Lda(doc_term_matrix, num_topics=12, id2word = dictionary, passes=20, iterations = 1200)
+print(ldamodel.print_topics(num_topics=12, num_words=10))
+doc_topic_gen = ldamodel[doc_term_matrix]
+df = pd.DataFrame(doc_topic_gen1)
+doc_topic_gen1 = [l for l,t in izip(doc_topic_gen,doc_term_matrix)]
+doc_topic_matrix = []
+for i in range(len(doc_topic_gen1)):
+    each_matrix = [0]*12
+    for j in range(12):
+        for k in doc_topic_gen1[i]:
+            if k[0] == j:
+                each_matrix[j] = k[1]
+                break
+            else:
+                continue
+    doc_topic_matrix.append(each_matrix)
+	
+doc_topic_matrix_df = pd.DataFrame(doc_topic_matrix, columns = ['Topic1', 'Topic2', 'Topic3', 'Topic4', 'Topic5', 'Topic6', 'Topic7', 'Topic8', 'Topic9', 'Topic10', 'Topic11', 'Topic12'])
+top_words_prob = [[prob for word, prob in ldamodel.show_topic(topicno, topn=25)] for topicno in range(ldamodel.num_topics)]
+top_words = [[word for word, prob in ldamodel.show_topic(topicno, topn=25)] for topicno in range(ldamodel.num_topics)]
+top_words_matrix = []
+for i in range(12):
+    top_words_matrix.append(top_words[i])
+    top_words_matrix.append(top_words_prob[i])
+top_words_matrix_df = pd.DataFrame(top_words_matrix).transpose()
+
+top_words_matrix_df.columns = ['Topic1', 'Topic1_prob', 'Topic2', 'Topic2_prob', 'Topic3', 'Topic3_prob', 'Topic4', 'Topic4_prob', 'Topic5', 'Topic5_prob', 'Topic6', 'Topic6_prob', 'Topic7', 'Topic7_prob', 'Topic8', 'Topic8_prob', 'Topic9', 'Topic9_prob', 'Topic10', 'Topic10_prob', 'Topic11', 'Topic11_prob', 'Topic12', 'Topic12_prob']
+
+
+top_words_matrix_df.to_csv("LDA_FILI_12T_Updated.csv")
+
+doc_topic_matrix_df.to_csv("Doc_Topic_Model_FILI_12T_Updated.csv")
+doc_topic_matrix_df.shape
+
+kClosestTerms(10,"athene",tf,lsa)
+
+data_raw.info()
+df.to_csv("C:\Users\A589562\Doc_Topic_Dist.csv")
+doc_topic_matrix_df.to_csv("C:\Users\A589562\doc_topic_matrix_df_7top.csv")
+data_raw['interaction_id'].nunique()
