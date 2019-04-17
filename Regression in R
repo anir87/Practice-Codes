@@ -1,0 +1,128 @@
+R FILE for Linear Regression
+#http://r-statistics.co/Assumptions-of-Linear-Regression.html
+#http://r-statistics.co/Linear-Regression.html
+
+
+getwd()
+setwd("C:/Users/a564807/Desktop")
+getwd()
+
+Ar_data <- read.csv("Custom BM.csv", header = TRUE)
+summary(Ar_data)
+attach(Ar_data)
+
+par(mfrow=c(2,2))
+scatter.smooth(x=MSCI_G, y=AMG_N, main="Y~X1")  # scatterplot1
+scatter.smooth(x=MSCI_M, y=AMG_N, main="Y~X2")  # scatterplot2
+scatter.smooth(x=MSCI_Q, y=AMG_N, main="Y~X3")  # scatterplot3
+
+par(mfrow=c(1,1))
+
+boxplot(AMG_N, main="AMG_N", sub=paste("Outlier rows: ", boxplot.stats(AMG_N)$out))
+boxplot(MSCI_G, main="MSCI_G", sub=paste("Outlier rows: ", boxplot.stats(MSCI_G)$out))
+boxplot(MSCI_M, main="MSCI_M", sub=paste("Outlier rows: ", boxplot.stats(MSCI_M)$out))
+boxplot(MSCI_Q, main="MSCI_Q", sub=paste("Outlier rows: ", boxplot.stats(MSCI_Q)$out))
+
+
+library(e1071)
+plot(density(AMG_N), main="Density Plot: AMG_N", ylab="Frequency", sub=paste("Skewness:", round(e1071::skewness(AMG_N), 2)))
+
+cor(AMG_N, MSCI_G) #0.6316137
+cor(AMG_N, MSCI_M) #0.2843205
+cor(AMG_N, MSCI_Q) #0.5087506
+cor(MSCI_G, MSCI_M) #0.6753281
+cor(MSCI_G, MSCI_Q) #0.9013146 -- High correlation exists b/n predictors
+cor(MSCI_M, MSCI_Q) #0.5944068
+
+#Check for Mean of Residuals = 0
+mod <- lm(AMG_N ~ MSCI_G+MSCI_M+MSCI_Q)
+mean(mod$residuals) #3.926547e-17 -- The mean of residuals is zero
+
+#Check for Homoscedasticity i.e. equal variance of residuals
+par(mfrow=c(2,2))
+plot(mod) 
+#Residuals vs Fitted graph may indicate non-linearity. However zero Heteroscedascticity proved
+#http://docs.statwing.com/interpreting-residual-plots-to-improve-your-regression/#nonlinear-header
+
+#check for no autocorrelation of residuals
+library(ggplot2)
+par(mfrow=c(1,1))
+acf(mod$residuals) #Test1
+
+lawstat::runs.test(mod$residuals) #install lawstat packge
+#Runs test for Null hypothesis whether the series is random & independent
+#Test2: with p-value = 0.253, we can accept the null hypothesis that the residuals are random
+#https://www.r-bloggers.com/predictability-of-stock-returns-using-runs-test/
+
+library(lmtest) # install lmtest package
+dwtest(mod)  #Test3: Durbin-Watson test
+#DW = 0.94872, p-value = 4.621e-06
+#alternative hypothesis: true autocorrelation is greater than 0
+#with such small p-value, we can reject the null hypothesis that the autocorrelation is zero.
+#Autocorrelation exists
+
+#Method to remove autocorrelation
+install.packages("DataCombine")
+library(DataCombine)
+Ar_data1 <- data.frame(Ar_data,mod1 = mod$residuals)
+Ar_data2 <- slide(Ar_data1, Var = "mod1", NewVar = "lag1", slideBy = -1)
+Ar_data3 <- na.omit(Ar_data2)
+mod2 <- lm(AMG_N ~ MSCI_G+MSCI_M+MSCI_Q+lag1, data = Ar_data3)
+
+#Checking for Autocorrelation 
+acf(mod2$residuals)
+
+library(lmtest) # install lmtest package
+dwtest(mod2)  #Test3: Durbin-Watson test
+#data:  mod2
+#DW = 1.9469, p-value = 0.2572
+#alternative hypothesis: true autocorrelation is greater than 0
+#Zero Autocorrelation
+
+#Check for Zero covariance b/n predictors and residuals
+cor.test(MSCI_G+MSCI_M+MSCI_Q,mod$residuals)
+cor(MSCI_G+MSCI_M+MSCI_Q,mod$residuals) #Same as above code
+#Pearson's product-moment correlation
+
+#data:  MSCI_G + MSCI_M + MSCI_Q and mod$residuals
+#t = 1.748e-16, df = 48, p-value = 1
+#alternative hypothesis: true correlation is not equal to 0
+#95 percent confidence interval:
+# -0.2783477  0.2783477
+#sample estimates:
+#         cor 
+#2.522958e-17 
+#p-value is high, so null hypothesis that true correlation is 0 can't be rejected. 
+#So, the assumption holds true for this model.
+
+
+#Check for no perfect multicollinearity
+install.packages("car")
+library(car)
+vif(mod)
+#MSCI_G   MSCI_M   MSCI_Q 
+#6.349019 1.842144 5.340248 
+#High Collinearity between MSCI_G and MSCI_Q
+
+#Assumption: The variability in X values is positive.This means the X values in a 
+#given sample must not all be the same (or even nearly the same).
+var(MSCI_G) #6.138502
+var(MSCI_M) #11.48616
+var(MSCI_Q) #8.098431
+#high variability satisfies the assumption
+
+#check for normality of residuals
+par(mfrow = c(2,2))
+plot(mod)
+#check the Normal Q-Q Plot on top right.
+#Since the points lie almostexactly on the line, it is perfectly normal distribution
+
+#Final Assumption: The number of observations must be greater than number of Xs
+
+summary(mod)
+summary(mod2)
+
+summary(lm(AMG_N~MSCI_Q))
+summary(lm(AMG_N~(MSCI_G+MSCI_Q)))
+vif(mod2)
+vif(mod)
