@@ -1,0 +1,95 @@
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.cluster import KMeans
+from sklearn.metrics import adjusted_rand_score
+import pandas as pd
+from sklearn import metrics
+from scipy.spatial.distance import cdist
+import numpy as np
+import matplotlib.pyplot as plt
+
+data_path = 'P:/FILI/VOC/Dataset for Clustering.xlsx'
+data = pd.read_excel(data_path)
+data.head()
+
+corpus = data['LEMMATIZED_TEXT']
+corpus
+
+vectorizer = TfidfVectorizer(stop_words='english')
+X = vectorizer.fit_transform(corpus)
+X.dtype
+
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.feature_extraction.text import CountVectorizer
+from nltk.util import ngrams
+from datetime import datetime
+from collections import Counter
+import csv
+import codecs
+import string
+import nltk
+from nltk import word_tokenize as wt
+import pandas as pd
+
+clean_corpus = []
+for i in range(len(corpus)):
+    clean_list = []
+    tokens = wt(corpus[i])
+    for w in tokens: 
+        #if w not in stop_words:           
+            #if w not in punc_list:
+            clean_list.append(w.lower())
+    clean_corpus.append(' '.join(clean_list)) 
+clean_corpus    
+
+ngram_vectorizer = CountVectorizer(analyzer='word', tokenizer=word_tokenize, ngram_range=(1,1), min_df=1)
+X = ngram_vectorizer.fit_transform(clean_corpus)
+
+vocab = list(ngram_vectorizer.get_feature_names())
+counts = X.sum(axis=0).A1
+
+freq_distribution = Counter(dict(zip(vocab, counts)))
+
+with open("C:/Users/a564807/unigram1.csv", "w") as f:
+    writer = csv.writer(f)
+    writer.writerows(freq_distribution.most_common(500))
+
+#converting from list to a stream of text
+text = ''.join(clean_corpus)
+tokens = nltk.word_tokenize(text)
+bigrams = ngrams(tokens,2)
+freq_bigrams = Counter(bigrams)
+
+with open("C:/Users/a564807/Bigram1.csv", "w") as f:
+    writer = csv.writer(f)
+    writer.writerows(freq_bigrams.most_common(500))
+    
+#K Means
+#distortions = []
+sse = {}
+K = range(1,6)
+for k in K:
+    kmeanModel = KMeans(n_clusters=k, init='k-means++', max_iter=1000, n_init=1).fit(X)
+    kmeanModel.fit(X)
+    #distortions.append(sum(np.min(cdist(X, kmeanModel.cluster_centers_, 'euclidean'), axis=1)) / X.shape[0])
+    
+import matplotlib.pyplot as plt
+%matplotlib inline
+
+plt.hist(kmeanModel.labels_, bins=5)
+plt.show()
+
+plt.figure()
+plt.plot(list(sse.keys()), list(sse.values()))
+plt.xlabel("Number of cluster")
+plt.ylabel("SSE")
+plt.show()
+
+print("Top terms per cluster:")
+order_centroids = kmeanModel.cluster_centers_.argsort()[:, ::-1]
+terms = vectorizer.get_feature_names()
+for i in range(5):
+    print("Cluster %d:" % i),
+    for ind in order_centroids[i, :10]:
+        print(' %s' % terms[ind]),
+    print
+    sse[k] = kmeanModel.inertia_ # Inertia: Sum of distances of samples to their closest cluster center
